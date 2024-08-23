@@ -12,7 +12,7 @@ def convert_to_outward_code(postcode):
         data = response.json()
         if data['status'] == 200:
             outward_code = data['result']['outcode']
-            return outward_code
+            return outward_code.upper()
     return None
 
 # Fetch renewable energy data for the specified postcode
@@ -34,13 +34,12 @@ def fetch_combined_data(postcode):
 # Create a color based on the percentage of wind and solar energy
 def create_tile_color(wind_perc, solar_perc):
     combined_renewable_perc = wind_perc + solar_perc
-
     if combined_renewable_perc < 40:
         return "rgb(230, 230, 230)"  # Light grey for percentages under 40%
     else:
         green_color = (0, 255, 0)
         light_grey_color = (230, 230, 230)
-        factor = (combined_renewable_perc - 40) / 60  # Normalizing between 40% and 100%
+        factor = (combined_renewable_perc - 40) / 60
         color = tuple(int(green_color[i] * factor + light_grey_color[i] * (1 - factor)) for i in range(3))
         return f"rgb({color[0]},{color[1]},{color[2]})"
 
@@ -71,49 +70,55 @@ def generate_html_calendar(postcode):
             }
             .calendar {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); /* Default Responsive columns */
+                grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
                 gap: 2px;
                 padding: 10px;
             }
             .tile {
                 background-color: #f0f0f0;
                 text-align: center;
-                font-size: 11px;
-                padding: 5px;
+                font-size: 16px;
+                padding: 15px;
                 border-radius: 5px;
                 box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             }
             .header {
                 text-align: center;
-                font-weight: bold;
+                font-weight: 900; /* Extra bold */
                 background-color: #f2f2f2;
                 font-family: Calibri, sans-serif;
+                padding: 20px;
+                font-size: 30px; /* Slightly larger and bolder */
+            }
+            .tile span:first-child {
+                font-weight: bold;
+            }
+            .postcode-form {
+                text-align: center;
+                margin-bottom: 20px;
+                margin-top: 20px;
+                font-size: 22px;
+                font-weight: bold;
+            }
+            .postcode-form input[type="text"] {
+                font-size: 20px;
                 padding: 10px;
+                width: 40%;
+                margin-right: 10px;
             }
-            /* Mobile-friendly adjustments */
-            @media (max-width: 600px) {
-                .calendar {
-                    grid-template-columns: repeat(4, 1fr); /* Max 4 columns wide */
-                }
-                .tile {
-                    font-size: 10px;
-                    padding: 3px;
-                }
-                .header {
-                    font-size: 14px;
-                    padding: 5px;
-                }
-            }
-            /* Embedded version adjustments */
-            @media (min-width: 601px) and (max-width: 1200px) {
-                .calendar {
-                    grid-template-columns: repeat(10, 1fr); /* Max 10 columns wide */
-                }
+            .postcode-form input[type="submit"] {
+                font-size: 20px;
+                padding: 10px 20px;
+                font-weight: bold;
             }
         </style>
     </head>
     <body>
         <h2 class="header">48-Hour Wind & Solar Forecast: {{ postcode }}</h2>
+        <form method="post" class="postcode-form">
+            Enter your postcode: <input type="text" name="postcode" value="{{ postcode }}">
+            <input type="submit" value="Check Forecast">
+        </form>
         <div class="calendar">
             {% for tile in tiles %}
                 <div class="tile" style="background-color: {{ tile.color }};">
@@ -131,7 +136,7 @@ def generate_html_calendar(postcode):
     for entry in combined_data:
         wind_perc = next((item['perc'] for item in entry['generationmix'] if item['fuel'] == 'wind'), 0)
         solar_perc = next((item['perc'] for item in entry['generationmix'] if item['fuel'] == 'solar'), 0)
-        combined_renewable_perc = round(wind_perc + solar_perc)  # Rounded to nearest whole number
+        combined_renewable_perc = round(wind_perc + solar_perc)
         color = create_tile_color(wind_perc, solar_perc)
         
         timestamp = datetime.strptime(entry['from'], "%Y-%m-%dT%H:%MZ")
@@ -155,12 +160,16 @@ def index():
         else:
             return "<p>Invalid postcode. Please try again.</p>"
     return '''
-        <form method="post">
-            Enter your postcode: <input type="text" name="postcode">
-            <input type="submit" value="Check Forecast">
-        </form>
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+            <h1 style="text-align: center; font-size: 3em; font-weight: bold; font-family: Calibri, sans-serif; margin-bottom: 20px;">48-Hour Wind & Solar Forecast</h1>
+            <form method="post" style="text-align: center; font-family: Calibri, sans-serif;">
+                <label for="postcode" style="font-size: 2em; font-weight:bold;">Enter your postcode:</label><br>
+                <input type="text" id="postcode" name="postcode" style="font-size: 2em; padding: 10px; width: 300px;"><br>
+                <input type="submit" value="Check Forecast" style="font-size: 2em; padding: 10px 20px; margin-top: 20px;">
+            </form>
+        </div>
     '''
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
