@@ -152,8 +152,12 @@ def generate_html_calendar(postcode):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
+        if 'postcode' not in request.form or not request.form['postcode']:
+            return "<p>Postcode is required. Please enter a valid postcode.</p>"
+        
         postcode = request.form['postcode']
         outward_code = convert_to_outward_code(postcode)
+        
         if outward_code:
             calendar_html = generate_html_calendar(outward_code)
             return calendar_html
