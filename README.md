@@ -1,6 +1,6 @@
 # Postcode Forecast
 
-This project is a web application that allows users to check the wind and solar energy forecast for a specific postcode in the UK.
+This project is a web application that allows users to check the regional wind and solar energy forecast using postcode searches in the UK.
 
 ## How to Use
 
