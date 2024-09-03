@@ -1,4 +1,4 @@
-# Postcode Forecast
+# Postcode Search Regional Forecast
 
 This project is a web application that allows users to check the regional wind and solar energy forecast using postcode searches in the UK.
 
