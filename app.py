@@ -26,21 +26,26 @@ def fetch_combined_data(postcode):
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Failed to fetch data: {e}")
-        return []
+        return [], None
     
     data = response.json()
-    return data['data']['data']
+    
+    # Extract the region name from the response
+    region_name = data['data'].get('shortname', 'Unknown Region')
+    
+    return data['data']['data'], region_name
 
-# Create a color based on the percentage of wind and solar energy
+# Create a color based on the percentage of wind and solar energy, fading from light grey to green starting at 25%
 def create_tile_color(wind_perc, solar_perc):
     combined_renewable_perc = wind_perc + solar_perc
-    if combined_renewable_perc < 40:
-        return "rgb(230, 230, 230)"  # Light grey for percentages under 40%
+    if combined_renewable_perc < 25:
+        return "rgb(230, 230, 230)"  # Light grey for percentages under 25%
     else:
         green_color = (0, 255, 0)
         light_grey_color = (230, 230, 230)
-        factor = (combined_renewable_perc - 40) / 60
-        color = tuple(int(green_color[i] * factor + light_grey_color[i] * (1 - factor)) for i in range(3))
+        factor = (combined_renewable_perc - 25) / 75
+        factor = min(max(factor, 0), 1)  # Ensure the factor is between 0 and 1
+        color = tuple(int(light_grey_color[i] * (1 - factor) + green_color[i] * factor) for i in range(3))
         return f"rgb({color[0]},{color[1]},{color[2]})"
 
 # Function to get the correct ordinal suffix for a given day
@@ -52,8 +57,8 @@ def get_ordinal_suffix(day):
     return suffix
 
 # Generate an HTML file for the energy calendar
-def generate_html_calendar(postcode):
-    combined_data = fetch_combined_data(postcode)
+def generate_html_calendar(postcode, region_name):
+    combined_data, _ = fetch_combined_data(postcode)
     
     if not combined_data:
         return "<p>Sorry, no data is available for the postcode '{}'. Please try entering another postcode.</p>".format(postcode)
@@ -114,7 +119,7 @@ def generate_html_calendar(postcode):
         </style>
     </head>
     <body>
-        <h2 class="header">48-Hour Wind & Solar Forecast: {{ postcode }}</h2>
+        <h2 class="header">48-Hour Wind & Solar Forecast: {{ region_name }}</h2>
         <form method="post" class="postcode-form">
             Enter your postcode: <input type="text" name="postcode" value="{{ postcode }}">
             <input type="submit" value="Check Forecast">
@@ -147,7 +152,7 @@ def generate_html_calendar(postcode):
         
         tiles.append({'color': color, 'time': time_str, 'date': date_str, 'percentage': combined_renewable_perc})
     
-    return render_template_string(calendar_html, tiles=tiles, postcode=postcode)
+    return render_template_string(calendar_html, tiles=tiles, postcode=postcode, region_name=region_name)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -159,8 +164,12 @@ def index():
         outward_code = convert_to_outward_code(postcode)
         
         if outward_code:
-            calendar_html = generate_html_calendar(outward_code)
-            return calendar_html
+            combined_data, region_name = fetch_combined_data(outward_code)
+            if combined_data:
+                calendar_html = generate_html_calendar(outward_code, region_name)
+                return calendar_html
+            else:
+                return "<p>Sorry, no data is available for this region. Please try again later.</p>"
         else:
             return "<p>Invalid postcode. Please try again.</p>"
     return '''
