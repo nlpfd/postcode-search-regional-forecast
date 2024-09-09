@@ -35,18 +35,34 @@ def fetch_combined_data(postcode):
     
     return data['data']['data'], region_name
 
-# Create a color based on the percentage of wind and solar energy, fading from light grey to green starting at 25%
+# Create a color based on the percentage of wind and solar energy, blending to a bright lime green for values above 50% and a near-luminous green for over 70%
 def create_tile_color(wind_perc, solar_perc):
     combined_renewable_perc = wind_perc + solar_perc
     if combined_renewable_perc < 25:
         return "rgb(230, 230, 230)"  # Light grey for percentages under 25%
-    else:
-        green_color = (0, 255, 0)
+    elif combined_renewable_perc < 50:
+        # Transition from grey to light green (0% grey to 50% green)
+        green_color = (173, 255, 47)  # Light green (lime green base)
         light_grey_color = (230, 230, 230)
-        factor = (combined_renewable_perc - 25) / 75
-        factor = min(max(factor, 0), 1)  # Ensure the factor is between 0 and 1
+        factor = (combined_renewable_perc - 25) / 25
+        factor = min(max(factor, 0), 1)
         color = tuple(int(light_grey_color[i] * (1 - factor) + green_color[i] * factor) for i in range(3))
-        return f"rgb({color[0]},{color[1]},{color[2]})"
+    elif combined_renewable_perc < 70:
+        # Transition from light green to stronger lime green for values between 50 and 70
+        strong_green_color = (50, 205, 50)  # Lime green
+        light_green_color = (173, 255, 47)  # Light lime green
+        factor = (combined_renewable_perc - 50) / 20
+        factor = min(max(factor, 0), 1)
+        color = tuple(int(light_green_color[i] * (1 - factor) + strong_green_color[i] * factor) for i in range(3))
+    else:
+        # Very high percentages (over 70%) should be near-luminous green
+        luminous_green_color = (0, 255, 0)  # Very bright green
+        strong_green_color = (50, 205, 50)  # Lime green
+        factor = (combined_renewable_perc - 70) / 30
+        factor = min(max(factor, 0), 1)
+        color = tuple(int(strong_green_color[i] * (1 - factor) + luminous_green_color[i] * factor) for i in range(3))
+    
+    return f"rgb({color[0]},{color[1]},{color[2]})"
 
 # Function to get the correct ordinal suffix for a given day
 def get_ordinal_suffix(day):
@@ -116,6 +132,12 @@ def generate_html_calendar(postcode, region_name):
                 padding: 10px 20px;
                 font-weight: bold;
             }
+            /* Style for the percentage */
+            .percentage {
+                font-size: 21px;
+                font-weight: bold;
+                color: #D333FF; /* Pinky purple color */
+            }
         </style>
     </head>
     <body>
@@ -129,7 +151,7 @@ def generate_html_calendar(postcode, region_name):
                 <div class="tile" style="background-color: {{ tile.color }};">
                     <span>{{ tile.time }}</span><br>
                     <span>{{ tile.date }}</span><br>
-                    <span>{{ tile.percentage }}%</span>
+                    <span class="percentage">{{ tile.percentage }}%</span>
                 </div>
             {% endfor %}
         </div>
@@ -138,6 +160,13 @@ def generate_html_calendar(postcode, region_name):
     '''
 
     tiles = []
+    # Dictionary to map full month names to abbreviations
+    month_abbreviations = {
+        "January": "Jan.", "February": "Feb.", "March": "Mar.", "April": "Apr.",
+        "May": "May", "June": "Jun.", "July": "Jul.", "August": "Aug.",
+        "September": "Sep.", "October": "Oct.", "November": "Nov.", "December": "Dec."
+    }
+
     for entry in combined_data:
         wind_perc = next((item['perc'] for item in entry['generationmix'] if item['fuel'] == 'wind'), 0)
         solar_perc = next((item['perc'] for item in entry['generationmix'] if item['fuel'] == 'solar'), 0)
@@ -148,7 +177,9 @@ def generate_html_calendar(postcode, region_name):
         time_str = timestamp.strftime("%H:%M")
         day = timestamp.day
         month = timestamp.strftime("%B")
-        date_str = f"{month} {day}{get_ordinal_suffix(day)}"
+        # Use the abbreviated month name
+        month_abbr = month_abbreviations.get(month, month)
+        date_str = f"{month_abbr} {day}{get_ordinal_suffix(day)}"
         
         tiles.append({'color': color, 'time': time_str, 'date': date_str, 'percentage': combined_renewable_perc})
     
