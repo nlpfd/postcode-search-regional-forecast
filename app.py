@@ -282,7 +282,7 @@ def generate_html_calendar(postcode, region_name):
     </style>
 </head>
 <body>
-    <h2 class="header">48-Hour Wind & Solar Forecast: {{ region_name }}</h2>
+    <h2 class="header">48-Hour Renewable Energy Regional Forecast: {{ region_name }}</h2>
     <form method="post" class="postcode-form">
         <input type="text" name="postcode" placeholder="Enter postcode">
         <input type="submit" value="Check Forecast">
@@ -411,7 +411,7 @@ def index():
         </style>
     </head>
     <body>
-        <h1>48-Hour Wind & Solar Forecast</h1>
+        <h1>48-Hour Renewable Energy Forecast</h1>
         <form method="post">
             <input type="text" id="postcode" name="postcode" placeholder="Enter postcode"><br>
             <input type="submit" value="Check Forecast">
